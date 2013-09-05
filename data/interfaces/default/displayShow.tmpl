@@ -13,33 +13,40 @@
 
 <script type="text/javascript" src="$sbRoot/js/lib/jquery.bookmarkscroll.js?$sbPID"></script>
 
-
-<div class="h2footer align-right">
-#if (len($seasonResults) > 14):
-    <select id="seasonJump">
-        <option value="jump">Jump to Season</option>
-    #for $seasonNum in $seasonResults:
-        <option value="#season-$seasonNum["season"]">#if int($seasonNum["season"]) == 0 then "Specials" else "Season " + str($seasonNum["season"])#</option>
-    #end for
-    </select>
-#else:
-    <b>Season:</b>
-    #for $seasonNum in $seasonResults:
-        #if int($seasonNum["season"]) == 0:
-            <a href="#season-$seasonNum["season"]">Specials</a>
-        #else:
-            <a href="#season-$seasonNum["season"]">${str($seasonNum["season"])}</a>
-        #end if
-        #if $seasonNum != $seasonResults[-1]:
-            <span class="separator">|</span>
-        #end if
-    #end for
+#if ($seasons == "all"):
+    <div class="h2footer align-right">
+    #if (len($seasonResults) > 14):
+        <select id="seasonJump">
+            <option value="jump">Jump to Season</option>
+        #for $seasonNum in $seasonResults:
+            <option value="#season-$seasonNum["season"]">#if int($seasonNum["season"]) == 0 then "Specials" else "Season " + str($seasonNum["season"])#</option>
+        #end for
+        </select>
+    #else:
+        <b>Season:</b>
+        #for $seasonNum in $seasonResults:
+            #if int($seasonNum["season"]) == 0:
+                <a href="#season-$seasonNum["season"]">Specials</a>
+            #else:
+                <a href="#season-$seasonNum["season"]">${str($seasonNum["season"])}</a>
+            #end if
+            #if $seasonNum != $seasonResults[-1]:
+                <span class="separator">|</span>
+            #end if
+        #end for
+    #end if
+    </div><br/>
 #end if
-</div><br/>
 
 #if $show_message:
     <div class="alert alert-info">
         $show_message
+    </div>
+#end if
+
+#if ($seasons == "latest"):
+    <div class="alert alert-info">
+        To save precious time and resources only showing latest season. <a href="?show=$show.tvdbid&amp;seasons=all">Show all seasons</a>
     </div>
 #end if
 
@@ -84,7 +91,7 @@ initially download: <b><%=", ".join([Quality.qualityStrings[x] for x in sorted(a
 #end if
 #if $bestQualities:
 replace with: <b><%=", ".join([Quality.qualityStrings[x] for x in sorted(bestQualities)])%></b>
-#end if 
+#end if
 #end if
     </td></tr>
     <tr><td class="showLegend">Language:</td><td><img src="$sbRoot/images/flags/${show.lang}.png" width="16" height="11" alt="" /> $show.lang</td></tr>
@@ -95,7 +102,7 @@ replace with: <b><%=", ".join([Quality.qualityStrings[x] for x in sorted(bestQua
 </div>
 
 <div class="float-left">
-Change selected episodes to 
+Change selected episodes to
 <select id="statusSelect">
 #for $curStatus in [$WANTED, $SKIPPED, $ARCHIVED, $IGNORED] + sorted($Quality.DOWNLOADED):
 #if $curStatus == $DOWNLOADED:
@@ -120,13 +127,13 @@ Change selected episodes to
         <label for="skipped" class="checkbox inline skipped"><input type="checkbox" id="skipped" checked="checked" /> Skipped: <b>$epCounts[$Overview.SKIPPED]</b></label>
     </div>
     <div class="pull-right">
-        <button class="btn btn-mini seriesCheck"><a href="#" onclick="return false;">Select Filtered Episodes</a></button> 
+        <button class="btn btn-mini seriesCheck"><a href="#" onclick="return false;">Select Filtered Episodes</a></button>
         <button class="btn btn-mini clearAll"><a href="#" onclick="return false;">Clear All</a></button>
     </div>
 </div>
 
 <table class="sickbeardTable" cellspacing="1" border="0" cellpadding="0">
-    
+
 #for $epResult in $sqlResults:
 
     #if int($epResult["season"]) != $curSeason:
@@ -138,7 +145,7 @@ Change selected episodes to
   </tr>
   <tr id="season-$epResult["season"]-cols"><th width="1%"><input type="checkbox" class="seasonCheck" id="$epResult["season"]" /></th><th>NFO</th><th>TBN</th><th>Episode</th><th>Name</th><th class="nowrap">Airdate</th><th>Filename</th><th>Status</th><th>Search</th></tr>
         #set $curSeason = int($epResult["season"])
-    #end if    
+    #end if
 
   #set $epStr = str($epResult["season"]) + "x" + str($epResult["episode"])
   #set $epLoc = $epResult["location"]

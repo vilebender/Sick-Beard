@@ -2239,7 +2239,7 @@ class Home:
             return _genericMessage("Update Failed","Update wasn't successful, not restarting. Check your log for more information.")
 
     @cherrypy.expose
-    def displayShow(self, show=None):
+    def displayShow(self, show=None, seasons="latest"):
 
         if show == None:
             return _genericMessage("Error", "Invalid show ID")
@@ -2252,14 +2252,25 @@ class Home:
         myDB = db.DBConnection()
 
         seasonResults = myDB.select(
-            "SELECT DISTINCT season FROM tv_episodes WHERE showid = ? ORDER BY season desc",
+            "SELECT DISTINCT season FROM tv_episodes WHERE showid = ? ORDER BY season DESC",
             [showObj.tvdbid]
         )
 
-        sqlResults = myDB.select(
-            "SELECT * FROM tv_episodes WHERE showid = ? ORDER BY season DESC, episode DESC",
+        latestSeason = myDB.select(
+            "SELECT DISTINCT season FROM tv_episodes WHERE showid = ? ORDER BY season DESC LIMIT 1",
             [showObj.tvdbid]
         )
+
+        if seasons == "all":
+            sqlResults = myDB.select(
+                "SELECT * FROM tv_episodes WHERE showid = ? ORDER BY season DESC, episode DESC",
+                [showObj.tvdbid]
+            )
+        else:
+            sqlResults = myDB.select(
+                "SELECT * FROM tv_episodes WHERE season = ? AND showid = ? ORDER BY season DESC, episode DESC",
+                [latestSeason[0]["season"], showObj.tvdbid]
+            )
 
         t = PageTemplate(file="displayShow.tmpl")
         t.submenu = [ { 'title': 'Edit', 'path': 'home/editShow?show=%d'%showObj.tvdbid } ]
@@ -2298,6 +2309,8 @@ class Home:
         t.sqlResults = sqlResults
         t.seasonResults = seasonResults
         t.show_message = show_message
+
+        t.seasons = seasons
 
         epCounts = {}
         epCats = {}
