@@ -76,10 +76,6 @@ class PageTemplate (Template):
             self.sbHost = re.match("^[^:]+", cherrypy.request.headers['Host'], re.X|re.M|re.S).group(0)
         self.projectHomePage = "http://code.google.com/p/sickbeard/"
 
-        if sickbeard.NZBS and sickbeard.NZBS_UID and sickbeard.NZBS_HASH:
-            logger.log(u"NZBs.org has been replaced, please check the config to configure the new provider!", logger.ERROR)
-            ui.notifications.error("NZBs.org Config Update", "NZBs.org has a new site. Please <a href=\""+sickbeard.WEB_ROOT+"/config/providers\">update your config</a> with the api key from <a href=\"http://nzbs.org/login\">http://nzbs.org</a> and then disable the old NZBs.org provider.")
-
         if "X-Forwarded-Host" in cherrypy.request.headers:
             self.sbHost = cherrypy.request.headers['X-Forwarded-Host']
         if "X-Forwarded-Port" in cherrypy.request.headers:
@@ -620,6 +616,7 @@ ConfigMenu = [
     { 'title': 'Notifications',     'path': 'config/notifications/'    },
 ]
 
+
 class ConfigGeneral:
 
     @cherrypy.expose
@@ -828,7 +825,6 @@ class ConfigSearch:
         sickbeard.NZBGET_CATEGORY = nzbget_category
         sickbeard.NZBGET_HOST = nzbget_host
 
-
         sickbeard.save_config()
 
         if len(results) > 0:
@@ -840,6 +836,7 @@ class ConfigSearch:
             ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE) )
 
         redirect("/config/search/")
+
 
 class ConfigPostProcessing:
 
@@ -991,7 +988,7 @@ class ConfigProviders:
         tempProvider = newznab.NewznabProvider(name, '')
 
         if tempProvider.getID() in providerDict:
-            return json.dumps({'error': 'Exists as '+providerDict[tempProvider.getID()].name})
+            return json.dumps({'error': 'Exists as ' + providerDict[tempProvider.getID()].name})
         else:
             return json.dumps({'success': tempProvider.getID()})
 
@@ -1020,8 +1017,6 @@ class ConfigProviders:
             sickbeard.newznabProviderList.append(newProvider)
             return newProvider.getID() + '|' + newProvider.configStr()
 
-
-
     @cherrypy.expose
     def deleteNewznabProvider(self, id):
 
@@ -1038,15 +1033,13 @@ class ConfigProviders:
 
         return '1'
 
-
     @cherrypy.expose
-    def saveProviders(self, nzbmatrix_username=None, nzbmatrix_apikey=None,
-                      nzbs_r_us_uid=None, nzbs_r_us_hash=None, newznab_string='',
+    def saveProviders(self,
+                      newznab_string='',
                       omgwtfnzbs_username=None, omgwtfnzbs_apikey=None,
                       tvtorrents_digest=None, tvtorrents_hash=None,
                       torrentleech_key=None,
                       btn_api_key=None, hdbits_username=None, hdbits_passkey=None,
-                      newzbin_username=None, newzbin_password=None,
                       provider_order=None):
 
         results = []
@@ -1061,16 +1054,16 @@ class ConfigProviders:
         # add all the newznab info we got into our list
         if newznab_string:
             for curNewznabProviderStr in newznab_string.split('!!!'):
-    
+
                 if not curNewznabProviderStr:
                     continue
-    
+
                 curName, curURL, curKey = curNewznabProviderStr.split('|')
-    
+
                 newProvider = newznab.NewznabProvider(curName, curURL, curKey)
-    
+
                 curID = newProvider.getID()
-    
+
                 # if it already exists then update it
                 if curID in newznabProviderDict:
                     newznabProviderDict[curID].name = curName
@@ -1078,9 +1071,9 @@ class ConfigProviders:
                     newznabProviderDict[curID].key = curKey
                 else:
                     sickbeard.newznabProviderList.append(newProvider)
-    
+
                 finishedNames.append(curID)
-    
+
             # delete anything that is missing
             for curProvider in sickbeard.newznabProviderList:
                 if curProvider.getID() not in finishedNames:
@@ -1093,20 +1086,8 @@ class ConfigProviders:
 
             provider_list.append(curProvider)
 
-            if curProvider == 'nzbs_r_us':
-                sickbeard.NZBSRUS = curEnabled
-            elif curProvider == 'nzbs_org_old':
-                sickbeard.NZBS = curEnabled
-            elif curProvider == 'nzbmatrix':
-                sickbeard.NZBMATRIX = curEnabled
-            elif curProvider == 'newzbin':
-                sickbeard.NEWZBIN = curEnabled
-            elif curProvider == 'bin_req':
-                sickbeard.BINREQ = curEnabled
-            elif curProvider == 'womble_s_index':
+            if curProvider == 'womble_s_index':
                 sickbeard.WOMBLE = curEnabled
-            elif curProvider == 'nzbx':
-                sickbeard.NZBX = curEnabled
             elif curProvider == 'omgwtfnzbs':
                 sickbeard.OMGWTFNZBS = curEnabled
             elif curProvider == 'ezrss':
@@ -1133,9 +1114,6 @@ class ConfigProviders:
         sickbeard.TORRENTLEECH_KEY = torrentleech_key.strip()
 
         sickbeard.BTN_API_KEY = btn_api_key.strip()
-
-        sickbeard.NZBSRUS_UID = nzbs_r_us_uid.strip()
-        sickbeard.NZBSRUS_HASH = nzbs_r_us_hash.strip()
 
         sickbeard.OMGWTFNZBS_USERNAME = omgwtfnzbs_username.strip()
         sickbeard.OMGWTFNZBS_APIKEY = omgwtfnzbs_apikey.strip()
@@ -1171,7 +1149,6 @@ class ConfigNotifications:
                           use_growl=None, growl_notify_onsnatch=None, growl_notify_ondownload=None, growl_host=None, growl_password=None,
                           use_prowl=None, prowl_notify_onsnatch=None, prowl_notify_ondownload=None, prowl_api=None, prowl_priority=0,
                           use_twitter=None, twitter_notify_onsnatch=None, twitter_notify_ondownload=None,
-                          use_notifo=None, notifo_notify_onsnatch=None, notifo_notify_ondownload=None, notifo_username=None, notifo_apisecret=None,
                           use_boxcar=None, boxcar_notify_onsnatch=None, boxcar_notify_ondownload=None, boxcar_username=None,
                           use_pushover=None, pushover_notify_onsnatch=None, pushover_notify_ondownload=None, pushover_userkey=None,
                           use_libnotify=None, libnotify_notify_onsnatch=None, libnotify_notify_ondownload=None,
@@ -1276,20 +1253,6 @@ class ConfigNotifications:
             use_twitter = 1
         else:
             use_twitter = 0
-
-        if notifo_notify_onsnatch == "on":
-            notifo_notify_onsnatch = 1
-        else:
-            notifo_notify_onsnatch = 0
-
-        if notifo_notify_ondownload == "on":
-            notifo_notify_ondownload = 1
-        else:
-            notifo_notify_ondownload = 0
-        if use_notifo == "on":
-            use_notifo = 1
-        else:
-            use_notifo = 0
 
         if boxcar_notify_onsnatch == "on":
             boxcar_notify_onsnatch = 1
@@ -1409,12 +1372,6 @@ class ConfigNotifications:
         sickbeard.TWITTER_NOTIFY_ONSNATCH = twitter_notify_onsnatch
         sickbeard.TWITTER_NOTIFY_ONDOWNLOAD = twitter_notify_ondownload
 
-        sickbeard.USE_NOTIFO = use_notifo
-        sickbeard.NOTIFO_NOTIFY_ONSNATCH = notifo_notify_onsnatch
-        sickbeard.NOTIFO_NOTIFY_ONDOWNLOAD = notifo_notify_ondownload
-        sickbeard.NOTIFO_USERNAME = notifo_username
-        sickbeard.NOTIFO_APISECRET = notifo_apisecret
-
         sickbeard.USE_BOXCAR = use_boxcar
         sickbeard.BOXCAR_NOTIFY_ONSNATCH = boxcar_notify_onsnatch
         sickbeard.BOXCAR_NOTIFY_ONDOWNLOAD = boxcar_notify_ondownload
@@ -1492,11 +1449,14 @@ class Config:
 
     notifications = ConfigNotifications()
 
+
 def haveXBMC():
     return sickbeard.USE_XBMC and sickbeard.XBMC_UPDATE_LIBRARY
 
+
 def havePLEX():
     return sickbeard.USE_PLEX and sickbeard.PLEX_UPDATE_LIBRARY
+
 
 def HomeMenu():
     return [
@@ -1504,9 +1464,10 @@ def HomeMenu():
         { 'title': 'Manual Post-Processing', 'path': 'home/postprocess/'                                        },
         { 'title': 'Update XBMC',            'path': 'home/updateXBMC/', 'requires': haveXBMC                   },
         { 'title': 'Update Plex',            'path': 'home/updatePLEX/', 'requires': havePLEX                   },
-        { 'title': 'Restart',                'path': 'home/restart/?pid='+str(sickbeard.PID), 'confirm': True   },
-        { 'title': 'Shutdown',               'path': 'home/shutdown/?pid='+str(sickbeard.PID), 'confirm': True                          },
+        { 'title': 'Restart',                'path': 'home/restart/?pid=' + str(sickbeard.PID), 'confirm': True   },
+        { 'title': 'Shutdown',               'path': 'home/shutdown/?pid=' + str(sickbeard.PID), 'confirm': True  },
     ]
+
 
 class HomePostProcess:
 
@@ -2039,16 +2000,6 @@ class Home:
             return "Test prowl notice sent successfully"
         else:
             return "Test prowl notice failed"
-
-    @cherrypy.expose
-    def testNotifo(self, username=None, apisecret=None):
-        cherrypy.response.headers['Cache-Control'] = "max-age=0,no-cache,no-store"
-
-        result = notifiers.notifo_notifier.test_notify(username, apisecret)
-        if result:
-            return "Notifo notification succeeded. Check your Notifo clients to make sure it worked"
-        else:
-            return "Error sending Notifo notification"
 
     @cherrypy.expose
     def testBoxcar(self, username=None):
