@@ -293,7 +293,7 @@ EXTRA_SCRIPTS = []
 
 GIT_PATH = None
 
-IGNORE_WORDS = "german,french,core2hd,dutch,swedish"
+IGNORE_WORDS = "german,french,core2hd,dutch,swedish,480p"
 
 __INITIALIZED__ = False
 
@@ -910,6 +910,7 @@ def saveAndShutdown(restart=False):
             if '--nolaunch' not in popen_list:
                 popen_list += ['--nolaunch']
             logger.log(u"Restarting Sick Beard with " + str(popen_list))
+            logger.close()
             subprocess.Popen(popen_list, cwd=os.getcwd())
 
     os._exit(0)
