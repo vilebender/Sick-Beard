@@ -849,7 +849,7 @@ class ConfigPostProcessing:
 
     @cherrypy.expose
     def savePostProcessing(self, naming_pattern=None, naming_multi_ep=None,
-                    xbmc_data=None, mediabrowser_data=None, synology_data=None, sony_ps3_data=None, wdtv_data=None, tivo_data=None,
+                    xbmc_data=None, xbmc_12plus_data=None, mediabrowser_data=None, synology_data=None, sony_ps3_data=None, wdtv_data=None, tivo_data=None,
                     use_banner=None, keep_processed_dir=None, process_automatically=None, rename_episodes=None,
                     move_associated_files=None, tv_download_dir=None, naming_custom_abd=None, naming_abd_pattern=None):
 
@@ -900,6 +900,7 @@ class ConfigPostProcessing:
         sickbeard.NAMING_CUSTOM_ABD = naming_custom_abd
 
         sickbeard.metadata_provider_dict['XBMC'].set_config(xbmc_data)
+        sickbeard.metadata_provider_dict['XBMC 12+'].set_config(xbmc_12plus_data)
         sickbeard.metadata_provider_dict['MediaBrowser'].set_config(mediabrowser_data)
         sickbeard.metadata_provider_dict['Synology'].set_config(synology_data)
         sickbeard.metadata_provider_dict['Sony PS3'].set_config(sony_ps3_data)
@@ -981,14 +982,14 @@ class ConfigProviders:
     def canAddNewznabProvider(self, name):
 
         if not name:
-            return json.dumps({'error': 'Invalid name specified'})
+            return json.dumps({'error': 'No Provider Name specified'})
 
         providerDict = dict(zip([x.getID() for x in sickbeard.newznabProviderList], sickbeard.newznabProviderList))
 
         tempProvider = newznab.NewznabProvider(name, '')
 
         if tempProvider.getID() in providerDict:
-            return json.dumps({'error': 'Exists as ' + providerDict[tempProvider.getID()].name})
+            return json.dumps({'error': 'Provider Name already exists as ' + providerDict[tempProvider.getID()].name})
         else:
             return json.dumps({'success': tempProvider.getID()})
 
@@ -1007,13 +1008,19 @@ class ConfigProviders:
             if not providerDict[name].default:
                 providerDict[name].name = name
                 providerDict[name].url = url
+
             providerDict[name].key = key
+            # a 0 in the key spot indicates that no key is needed
+            if key == '0':
+                providerDict[name].needs_auth = False
+            else:
+                providerDict[name].needs_auth = True
 
             return providerDict[name].getID() + '|' + providerDict[name].configStr()
 
         else:
 
-            newProvider = newznab.NewznabProvider(name, url, key)
+            newProvider = newznab.NewznabProvider(name, url, key=key)
             sickbeard.newznabProviderList.append(newProvider)
             return newProvider.getID() + '|' + newProvider.configStr()
 
@@ -1058,21 +1065,30 @@ class ConfigProviders:
                 if not curNewznabProviderStr:
                     continue
 
-                curName, curURL, curKey = curNewznabProviderStr.split('|')
+                cur_name, cur_url, cur_key = curNewznabProviderStr.split('|')
 
-                newProvider = newznab.NewznabProvider(curName, curURL, curKey)
+                if not cur_url.endswith('/'):
+                    cur_url = cur_url + '/'
 
-                curID = newProvider.getID()
+                newProvider = newznab.NewznabProvider(cur_name, cur_url, key=cur_key)
+
+                cur_id = newProvider.getID()
 
                 # if it already exists then update it
-                if curID in newznabProviderDict:
-                    newznabProviderDict[curID].name = curName
-                    newznabProviderDict[curID].url = curURL
-                    newznabProviderDict[curID].key = curKey
+                if cur_id in newznabProviderDict:
+                    newznabProviderDict[cur_id].name = cur_name
+                    newznabProviderDict[cur_id].url = cur_url
+                    newznabProviderDict[cur_id].key = cur_key
+                    # a 0 in the key spot indicates that no key is needed
+                    if cur_key == '0':
+                        newznabProviderDict[cur_id].needs_auth = False
+                    else:
+                        newznabProviderDict[cur_id].needs_auth = True
+
                 else:
                     sickbeard.newznabProviderList.append(newProvider)
 
-                finishedNames.append(curID)
+                finishedNames.append(cur_id)
 
             # delete anything that is missing
             for curProvider in sickbeard.newznabProviderList:
@@ -1118,6 +1134,7 @@ class ConfigProviders:
         sickbeard.OMGWTFNZBS_USERNAME = omgwtfnzbs_username.strip()
         sickbeard.OMGWTFNZBS_APIKEY = omgwtfnzbs_apikey.strip()
 
+        sickbeard.NEWZNAB_DATA = '!!!'.join([x.configStr() for x in sickbeard.newznabProviderList])
         sickbeard.PROVIDER_ORDER = provider_list
 
         sickbeard.save_config()
@@ -1128,7 +1145,7 @@ class ConfigProviders:
             ui.notifications.error('Error(s) Saving Configuration',
                         '<br />\n'.join(results))
         else:
-            ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE) )
+            ui.notifications.message('Configuration Saved', ek.ek(os.path.join, sickbeard.CONFIG_FILE))
 
         redirect("/config/providers/")
 
@@ -1456,7 +1473,7 @@ class ConfigHidden:
 
         sickbeard.ANON_REDIRECT = anon_redirect
         sickbeard.GIT_PATH = git_path
-        sickbeard.EXTRA_SCRIPTS = extra_scripts.split('|')
+        sickbeard.EXTRA_SCRIPTS = [x.strip() for x in extra_scripts.split('|') if x.strip()]
         sickbeard.CREATE_MISSING_SHOW_DIRS = create_missing_show_dirs
         sickbeard.ADD_SHOWS_WO_DIR = add_shows_wo_dir
         sickbeard.IGNORE_WORDS = ignore_words
@@ -2680,7 +2697,7 @@ class Home:
                     epObj.status = int(status)
                     epObj.saveToDB()
 
-        msg = "Backlog was automatically started for the following seasons of <b>"+showObj.name+"</b>:<br />"
+        msg = "Backlog was automatically started for the following seasons of <b>" + showObj.name + "</b>:<br /><ul>"
         for cur_segment in segment_list:
             msg += "<li>Season "+str(cur_segment)+"</li>"
             logger.log(u"Sending backlog for "+showObj.name+" season "+str(cur_segment)+" because some eps were set to wanted")
